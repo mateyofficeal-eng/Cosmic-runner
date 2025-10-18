@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Cosmic Runner — Base Defender (Auto Start)</title>
+  <style>
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#041a2d 0%,#0a2345 100%);color:#eaf6ff;font-family:system-ui;overflow:hidden}
+    canvas{display:block;margin:auto;border-radius:12px;background:linear-gradient(180deg,#09203f 0%,#203a43 100%);box-shadow:0 0 40px rgba(0,0,0,0.5)}
+    #hud{position:fixed;top:10px;left:10px;font-size:16px;color:#fff;text-shadow:0 0 4px #000}
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="960" height="540"></canvas>
+  <div id="hud">Scor: <span id="score">0</span> | HP Casă: <span id="baseHp">100</span></div>
+  <script>
+    const c=document.getElementById('gameCanvas');
+    const ctx=c.getContext('2d');
+    let W=c.width,H=c.height;
+    let running=true,score=0;
+    const player={x:200,y:H-100,w:40,h:40,vy:0,grounded:false};
+    const base={x:60,y:H-120,w:80,h:100,hp:100,fire:0};
+    const bullets=[],enemies=[];
+    function jump(){if(player.grounded){player.vy=-600;player.grounded=false;}}
+    window.addEventListener('keydown',e=>{if(e.code==='Space')jump();});
+    function spawnEnemy(){enemies.push({x:W+40,y:H-80,w:40,h:40,vx:-200});}
+    function update(dt){
+      player.vy+=2000*dt;player.y+=player.vy*dt;if(player.y+player.h>H){player.y=H-player.h;player.vy=0;player.grounded=true;}
+      for(let e of enemies){e.x+=e.vx*dt;}
+      enemies.forEach((e,i)=>{if(e.x+e.w<0){enemies.splice(i,1);score+=10;}});
+      base.fire-=dt;if(base.fire<=0&&enemies.length){bullets.push({x:base.x+base.w,y:base.y+base.h/2,vx:500,ypos:base.y+base.h/2});base.fire=1;}}
+    function draw(){ctx.clearRect(0,0,W,H);
+      // background stars
+      for(let i=0;i<60;i++){ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect((i*40+Date.now()/50)%W,H-200+Math.sin(i)*30,2,2);} 
+      // ground
+      ctx.fillStyle='#123';ctx.fillRect(0,H-20,W,20);
+      // base
+      ctx.fillStyle='#3af';ctx.fillRect(base.x,base.y,base.w,base.h);
+      ctx.fillStyle='#6ff';ctx.fillRect(base.x+base.w-10,base.y+base.h/2-5,20,10);
+      // player
+      ctx.fillStyle='#ffb';ctx.fillRect(player.x,player.y,player.w,player.h);
+      // enemies
+      ctx.fillStyle='#f66';for(let e of enemies){ctx.fillRect(e.x,e.y,e.w,e.h);}
+      // bullets
+      ctx.fillStyle='#afa';for(let b of bullets){b.x+=b.vx*1/60;ctx.fillRect(b.x,b.ypos,6,2);}  
+      // collisions
+      for(let bi=bullets.length-1;bi>=0;bi--){for(let ei=enemies.length-1;ei>=0;ei--){let b=bullets[bi],e=enemies[ei];if(b.x<e.x+e.w&&b.x+6>e.x&&b.ypos<e.y+e.h&&b.ypos+2>e.y){bullets.splice(bi,1);enemies.splice(ei,1);score+=50;break;}}}
+      document.getElementById('score').textContent=Math.floor(score);
+      document.getElementById('baseHp').textContent=Math.floor(base.hp);
+    }
+    let last=performance.now(),enemyTimer=0;
+    function loop(t){let dt=(t-last)/1000;last=t;if(running){enemyTimer+=dt;if(enemyTimer>2){spawnEnemy();enemyTimer=0;}update(dt);draw();requestAnimationFrame(loop);} }
+    loop(last);
+  </script>
+</body>
+</html>
